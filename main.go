@@ -10,6 +10,7 @@ import (
 	"gorm.io/gorm"
 
 	"test/handlers"
+	"test/middleware"
 	"test/models"
 )
 
@@ -93,5 +94,9 @@ func main (){
 		eventHandler.GetAllEvents(w, r)
 	})
 
-	http.ListenAndServe(":8080",nil)
+	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
+		handlers.UploadFile(w,r)
+	})
+
+	http.ListenAndServe(":8080",middleware.CORS(http.DefaultServeMux))
 }
