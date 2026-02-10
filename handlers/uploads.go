@@ -71,13 +71,13 @@ const maxUploadSize = 10 << 20 // 10 MB
 	defer dst.Close()
 
 	io.Copy(dst, file)
-
+//Поменять Localhost
 
 	w.Header().Set("Content-Type", "application/json")
 json.NewEncoder(w).Encode(UploadResponse{
     Filename:     filename,
 	OriginalName: handler.Filename,
 	Size:         handler.Size,
-	URL:          "/uploads/" + filename,
+	URL:          "http://localhost:8080/uploads/" + filename,
 })
 }

@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 
 	"gorm.io/driver/sqlite"
 	"gorm.io/gorm"
@@ -15,6 +16,7 @@ import (
 )
 
 var db *gorm.DB
+
 
 
 
@@ -34,6 +36,10 @@ func init(){
 
 func main (){
 
+	jwtSecret := []byte(os.Getenv("JWT_SECRET"))
+	authHandler := &handlers.AuthHandler{DB: db, JWTSecret: jwtSecret}
+	authMiddleware := middleware.AuthMiddleware()
+
 	eventHandler := &handlers.EventHandler{DB: db}
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
 
@@ -46,7 +52,15 @@ func main (){
 	})
 
 
-	http.HandleFunc("/create", func(w http.ResponseWriter, r *http.Request){
+
+	http.HandleFunc("/register", authHandler.Register)
+	http.HandleFunc("/login", authHandler.Login)
+
+
+
+
+
+	http.Handle("/create", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
 
 		if r.Method != http.MethodPost {
 			http.Error(w, "Ошибка обработки запроса", http.StatusBadRequest)
@@ -79,15 +93,29 @@ func main (){
 		
 
 
-	})
+	})))
 
+	
 
-	http.HandleFunc("/event/create", func(w http.ResponseWriter, r *http.Request) {
+	http.Handle("/event", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		eventHandler.CreateEvent(w, r)
-	})
+	})))
 
-	http.HandleFunc("/event", func(w http.ResponseWriter, r *http.Request) {
-		eventHandler.GetEvent(w,r)
+	// 	http.HandleFunc("/event", func(w http.ResponseWriter, r *http.Request) {
+	// eventHandler.CreateEvent(w, r)
+	// })
+
+
+	http.HandleFunc("/event/{id}", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			eventHandler.GetEvent(w, r)
+		case http.MethodPatch:
+			h := authMiddleware(middleware.RequireRole(db, models.RoleAdmin, models.RoleModerator)(http.HandlerFunc(eventHandler.SetEventStatus)))
+			h.ServeHTTP(w, r)
+		default:
+			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
+		}
 	})
 
 	http.HandleFunc("/events", func(w http.ResponseWriter, r *http.Request) {
@@ -97,6 +125,9 @@ func main (){
 	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
 		handlers.UploadFile(w,r)
 	})
+
+
+	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer((http.Dir("uploads")))))
 
 	http.ListenAndServe(":8080",middleware.CORS(http.DefaultServeMux))
 }
