@@ -1,9 +1,7 @@
 package main
 
 import (
-	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"os"
 
@@ -31,7 +29,7 @@ func init(){
 		fmt.Println("база данных создана")
 	}
 
-	db.AutoMigrate(&models.User{}, &models.Event{})
+	db.AutoMigrate(&models.User{}, &models.Event{}, &models.Category{})
 }
 
 func main (){
@@ -41,6 +39,8 @@ func main (){
 	authMiddleware := middleware.AuthMiddleware()
 
 	eventHandler := &handlers.EventHandler{DB: db}
+
+	categoryHanler := &handlers.CategoryHandler{DB: db}
 	http.HandleFunc("/", func(w http.ResponseWriter, r *http.Request){
 
 		if r.Method != http.MethodGet {
@@ -60,40 +60,6 @@ func main (){
 
 
 
-	http.Handle("/create", authMiddleware(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request){
-
-		if r.Method != http.MethodPost {
-			http.Error(w, "Ошибка обработки запроса", http.StatusBadRequest)
-		}
-
-
-		fmt.Fprintf(w, "create" )
-		body,err := io.ReadAll(r.Body)
-		if err != nil{
-			http.Error(w, "Ошибка чтения тела запроса",http.StatusBadRequest)
-			return
-		}
-
-		var user models.User
-		if err := json.Unmarshal(body, &user); err != nil {
-			http.Error(w, "Ошибка парсинга JSON: "+err.Error(), http.StatusBadRequest)
-			return
-		}
-
-		if err := db.Create(&user).Error; err != nil {
-			http.Error(w, "Ошибка создания пользователя"+ err.Error(), http.StatusInternalServerError )
-		}
-
-		w.Header().Set("Content-type", "application/json")
-		json.NewEncoder(w).Encode(user)
-
-		
-
-		fmt.Println(user)
-		
-
-
-	})))
 
 	
 
@@ -125,6 +91,21 @@ func main (){
 	http.HandleFunc("/upload", func(w http.ResponseWriter, r *http.Request) {
 		handlers.UploadFile(w,r)
 	})
+
+	http.HandleFunc("/category", func(w http.ResponseWriter, r *http.Request) {
+		switch r.Method {
+		case http.MethodGet:
+			categoryHanler.GetCategories(w, r)
+		case http.MethodPost:
+			h := authMiddleware(middleware.RequireRole(db,models.RoleAdmin)(http.HandlerFunc(categoryHanler.CreateCategory)))
+			h.ServeHTTP(w, r)
+		
+		default: 
+			http.Error(w, "Метод не разрешен, используйте GET или POST", http.StatusMethodNotAllowed)
+		}
+		
+	})
+
 
 
 	http.Handle("/uploads/", http.StripPrefix("/uploads/", http.FileServer((http.Dir("uploads")))))

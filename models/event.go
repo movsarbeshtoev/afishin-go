@@ -38,6 +38,9 @@ type EventMetadata struct {
 
 
 
+
+
+
 type Event struct {
 	ID              uint           `gorm:"primaryKey" json:"id"`
 	Title           string         `json:"title" gorm:"column:title"`
@@ -46,8 +49,10 @@ type Event struct {
 	Address        	string       `json:"address" gorm:"column:address"`
 	Date            EventDate      `json:"date" gorm:"embedded;embeddedPrefix:date_"`
 	Organizer       Organizer      `json:"organizer" gorm:"embedded;embeddedPrefix:organizer_"`
-	Category        string         `json:"category" gorm:"column:category"`
+	CategoryID		*uint			`json:"category_id" gorm:"column:category_id"`
+	Category        *Category  `json:"category,omitempty" gorm:"foreignKey:CategoryID"`
 	Images          EventImages    `json:"images" gorm:"embedded;embeddedPrefix:image_"`
 	Status      	string         `json:"status" gorm:"column:status; default:'pending'"`
 	Metadata        EventMetadata  `json:"metadata" gorm:"embedded;embeddedPrefix:metadata_"`
 }
+
