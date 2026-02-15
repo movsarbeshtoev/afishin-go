@@ -79,6 +79,9 @@ func main (){
 		case http.MethodPatch:
 			h := authMiddleware(middleware.RequireRole(db, models.RoleAdmin, models.RoleModerator)(http.HandlerFunc(eventHandler.SetEventStatus)))
 			h.ServeHTTP(w, r)
+		case http.MethodDelete:
+			h := authMiddleware(middleware.RequireRole(db, models.RoleAdmin, models.RoleModerator)(http.HandlerFunc(eventHandler.DeleteEvente)))
+			h.ServeHTTP(w, r)
 		default:
 			http.Error(w, "Method Not Allowed", http.StatusMethodNotAllowed)
 		}

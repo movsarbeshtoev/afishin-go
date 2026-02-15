@@ -43,6 +43,44 @@ func pathId (w http.ResponseWriter, r *http.Request) ( eventId uint){
 	
 }
 
+func extractIdFromPath(path string) (uint,error) {
+	// убираем начальный и конечный слэш
+	path = strings.Trim(path, "/")
+	parts := strings.Split(path, "/")
+
+	// Ожидаем формат: event/{id}
+
+	if len(parts) >= 2 && parts[0] == "event" {
+		id, err := strconv.ParseUint(parts[1], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("Неверный формат ID: %v" , err)
+		}
+		
+		return uint(id), nil
+	}
+
+	return 0, fmt.Errorf("ID не найден в пути")
+
+
+}
+
+// extractIDFromPath извлекает ID из URL пути вида /event/123
+func extractIDFromPath(path string) (uint, error) {
+	// Убираем начальный и конечный слэш
+	path = strings.Trim(path, "/")
+	parts := strings.Split(path, "/")
+	
+	// Ожидаем формат: event/{id}
+	if len(parts) >= 2 && parts[0] == "event" {
+		id, err := strconv.ParseUint(parts[1], 10, 32)
+		if err != nil {
+			return 0, fmt.Errorf("неверный формат ID: %v", err)
+		}
+		return uint(id), nil
+	}
+	
+	return 0, fmt.Errorf("ID не найден в пути")
+}
 
 
 func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request){
@@ -88,44 +126,6 @@ func (h *EventHandler) CreateEvent(w http.ResponseWriter, r *http.Request){
 	fmt.Printf("Событие создано :%+v\n", event )
 }
 
-func extractIdFromPath(path string) (uint,error) {
-	// убираем начальный и конечный слэш
-	path = strings.Trim(path, "/")
-	parts := strings.Split(path, "/")
-
-	// Ожидаем формат: event/{id}
-
-	if len(parts) >= 2 && parts[0] == "event" {
-		id, err := strconv.ParseUint(parts[1], 10, 32)
-		if err != nil {
-			return 0, fmt.Errorf("Неверный формат ID: %v" , err)
-		}
-		
-		return uint(id), nil
-	}
-
-	return 0, fmt.Errorf("ID не найден в пути")
-
-
-}
-
-// extractIDFromPath извлекает ID из URL пути вида /event/123
-func extractIDFromPath(path string) (uint, error) {
-	// Убираем начальный и конечный слэш
-	path = strings.Trim(path, "/")
-	parts := strings.Split(path, "/")
-	
-	// Ожидаем формат: event/{id}
-	if len(parts) >= 2 && parts[0] == "event" {
-		id, err := strconv.ParseUint(parts[1], 10, 32)
-		if err != nil {
-			return 0, fmt.Errorf("неверный формат ID: %v", err)
-		}
-		return uint(id), nil
-	}
-	
-	return 0, fmt.Errorf("ID не найден в пути")
-}
 
 
 func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request){
@@ -159,6 +159,43 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request){
 
 
 
+}
+
+func(h *EventHandler) DeleteEvente(w http.ResponseWriter, r *http.Request){
+	body,err := io.ReadAll(r.Body)
+	if err !=nil {
+		http.Error(w, "Ошибка чтения запроса" + err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	defer r.Body.Close()
+
+	var  isStr string
+
+	if err := json.Unmarshal(body, &isStr); err !=nil {
+		http.Error(w, "Ошибка парсинга json", http.StatusBadRequest)
+		return
+	}
+
+	id,err := strconv.ParseUint(isStr, 10, 32)
+	if err != nil {
+		 http.Error(w, "Недопустимый ID", http.StatusBadRequest)
+    return
+	}
+
+	result := h.DB.Delete(&models.Event{},id)
+		if result.Error != nil {
+			 http.Error(w, "Ошибка удаления: "+result.Error.Error(), http.StatusInternalServerError)
+    return
+		}
+
+		if result.RowsAffected == 0 {
+			 http.Error(w, "Событие не найдено", http.StatusNotFound)
+    return
+		}
+
+		w.WriteHeader(http.StatusNoContent)
+	
 }
 
 func (h *EventHandler) GetAllEvents(w http.ResponseWriter, r *http.Request) {
