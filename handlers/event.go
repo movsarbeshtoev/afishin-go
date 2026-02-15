@@ -162,28 +162,11 @@ func (h *EventHandler) GetEvent(w http.ResponseWriter, r *http.Request){
 }
 
 func(h *EventHandler) DeleteEvente(w http.ResponseWriter, r *http.Request){
-	body,err := io.ReadAll(r.Body)
-	if err !=nil {
-		http.Error(w, "Ошибка чтения запроса" + err.Error(), http.StatusBadRequest)
-		return
-	}
 
-	defer r.Body.Close()
 
-	var  isStr string
+	eventID := pathId(w, r)
 
-	if err := json.Unmarshal(body, &isStr); err !=nil {
-		http.Error(w, "Ошибка парсинга json", http.StatusBadRequest)
-		return
-	}
-
-	id,err := strconv.ParseUint(isStr, 10, 32)
-	if err != nil {
-		 http.Error(w, "Недопустимый ID", http.StatusBadRequest)
-    return
-	}
-
-	result := h.DB.Delete(&models.Event{},id)
+	result := h.DB.Delete(&models.Event{},eventID)
 		if result.Error != nil {
 			 http.Error(w, "Ошибка удаления: "+result.Error.Error(), http.StatusInternalServerError)
     return
