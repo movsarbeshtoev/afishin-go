@@ -189,18 +189,13 @@ fmt.Printf("statusParam: %s\n", statusParam)
 		}
 
 		categoryIDParam := r.URL.Query().Get("category_id")
-		slugParam := r.URL.Query().Get("category")
-
 		if categoryIDParam != "" {
-			id,err := strconv.ParseUint(categoryIDParam, 10,32)
-			if err != nil{
+			id, err := strconv.ParseUint(categoryIDParam, 10, 32)
+			if err != nil {
 				http.Error(w, "Недопустимый category_id", http.StatusBadRequest)
 				return
 			}
-
 			query = query.Where("category_id = ?", id)
-		}else if slugParam != ""{
-			query =query.Where("category_id IN (SELECT id FROM categories WHERE slug = ?)", slugParam)
 		}
 
 		if err := query.Find(&events).Error; err != nil {

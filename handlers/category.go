@@ -34,6 +34,11 @@ func (h *CategoryHandler) CreateCategory(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	if cat.Name == ""{
+		http.Error(w, "Категория пуста", http.StatusBadRequest)
+		return
+	}
+
 	if err := h.DB.Create(&cat).Error; err != nil {
 		http.Error(w, "Ошибка создания категории" + err.Error(), http.StatusInternalServerError)
         return
@@ -54,7 +59,7 @@ func (h *CategoryHandler) GetCategories(w http.ResponseWriter, r *http.Request) 
 
 
     var categories []models.Category
-	
+
     if err := h.DB.Find(&categories).Error; err != nil {
         http.Error(w, err.Error(), http.StatusInternalServerError)
         return
